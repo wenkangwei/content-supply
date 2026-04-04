@@ -14,8 +14,8 @@ class Item(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    content: Mapped[str | None] = mapped_column(Text("mediumtext"), nullable=True)
-    original_content: Mapped[str | None] = mapped_column(Text("mediumtext"), nullable=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_content: Mapped[str | None] = mapped_column(Text, nullable=True)
     url: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -30,7 +30,7 @@ class Item(Base):
         Enum("article", "video", "post", name="item_content_type"),
         default="article",
     )
-    tags: Mapped[str | None] = mapped_column(Text("json"), nullable=True)
+    tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     quality_score: Mapped[float] = mapped_column(Float, default=0.0)
     content_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

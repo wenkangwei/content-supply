@@ -1,30 +1,15 @@
 """RSS/Atom feed crawler using feedparser."""
 
 import logging
-from dataclasses import dataclass, field
 from datetime import datetime
 from time import struct_time
 from typing import Optional
 
 import feedparser
 
+from content_supply.services.types import CrawledItem
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class CrawledItem:
-    """Normalized item from any crawl source."""
-
-    title: str
-    url: str
-    summary: str = ""
-    content: str = ""
-    author: str = ""
-    image_url: str = ""
-    published_at: Optional[datetime] = None
-    source_name: str = ""
-    tags: list[str] = field(default_factory=list)
-    extra: dict = field(default_factory=dict)
 
 
 class RSSCrawler:
@@ -126,6 +111,7 @@ class RSSCrawler:
             image_url=image_url,
             published_at=published_at,
             source_name=source_name,
+            source_type="rss",
             tags=tags,
         )
 

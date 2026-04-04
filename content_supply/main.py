@@ -35,13 +35,13 @@ def create_app() -> FastAPI:
     from content_supply.api.tags import router as tags_router
 
     app.include_router(health_router, prefix="/api", tags=["health"])
-    app.include_router(feeds_router, prefix="/api", tags=["feeds"])
-    app.include_router(items_router, prefix="/api", tags=["items"])
-    app.include_router(crawl_router, prefix="/api", tags=["crawl"])
-    app.include_router(hot_router, prefix="/api", tags=["hot"])
-    app.include_router(rewrite_router, prefix="/api", tags=["rewrite"])
-    app.include_router(cleanup_router, prefix="/api", tags=["cleanup"])
-    app.include_router(tags_router, prefix="/api", tags=["tags"])
+    app.include_router(feeds_router, tags=["feeds"])
+    app.include_router(items_router, tags=["items"])
+    app.include_router(crawl_router, tags=["crawl"])
+    app.include_router(hot_router, tags=["hot"])
+    app.include_router(rewrite_router, tags=["rewrite"])
+    app.include_router(cleanup_router, tags=["cleanup"])
+    app.include_router(tags_router, tags=["tags"])
 
     return app
 
