@@ -2,7 +2,7 @@
 name = "content-supply"
 version = "0.1.0"
 description = "Content supply platform — multi-strategy crawling, LLM rewriting, and content pool management for recommendation systems"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     # Web framework
     "fastapi>=0.110.0",
@@ -45,7 +45,7 @@ supply = "content_supply.cli:cli"
 
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -53,4 +53,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py310"
+
+[tool.setuptools.packages.find]
+include = ["content_supply*"]

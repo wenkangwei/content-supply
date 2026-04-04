@@ -94,5 +94,9 @@ def load_app_config(config_path: Optional[Path] = None) -> AppConfig:
                         import os
                         v = os.environ.get(parts[0], parts[1] if len(parts) > 1 else "")
                     if hasattr(section_obj, k):
-                        setattr(section_obj, k, type(getattr(section_obj, k))(v))
+                        current = getattr(section_obj, k)
+                        if current is not None and v is not None:
+                            setattr(section_obj, k, type(current)(v))
+                        elif v is not None:
+                            setattr(section_obj, k, v)
     return config
