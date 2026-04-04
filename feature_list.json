@@ -60,7 +60,7 @@
         "GET /api/health 返回 {status: ok}",
         "lifespan 正确初始化和清理 DB"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F006",
@@ -73,7 +73,7 @@
         "PUT /api/feeds/{id} 更新",
         "DELETE /api/feeds/{id} 删除"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F007",
@@ -84,7 +84,7 @@
         "toggle 将 active 变为 paused",
         "再次 toggle 恢复为 active"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F008",
@@ -96,7 +96,7 @@
         "每个 entry 包含 title, url, summary, author, published, image",
         "处理异常 feed（空内容、网络错误）"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F009",
@@ -108,7 +108,7 @@
         "处理抓取失败（404、超时）",
         "支持 robots.txt 遵守"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F010",
@@ -120,7 +120,7 @@
         "新采集的词与历史去重",
         "写入 cs_hot_keywords 表"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F011",
@@ -132,7 +132,7 @@
         "调用 Web Scraper 抓取内容",
         "关联 hot_keyword_id 写入 cs_items"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F012",
@@ -144,7 +144,7 @@
         "相同 content_hash 的内容标记为重复",
         "去重检查在写入前执行"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F013",
@@ -156,7 +156,7 @@
         "根据 source_name 和内容分类到 category",
         "标签写入 JSON 字段"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F014",
@@ -168,7 +168,7 @@
         "结果 0-1 范围",
         "写入 quality_score 字段"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F015",
@@ -181,7 +181,7 @@
         "ZADD hot_items:global {quality_score} {item_id} 推送到 Redis",
         "Redis 推送失败不影响 MySQL 写入"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F016",
@@ -194,7 +194,7 @@
         "is_rewritten 标记为 true",
         "创建 rewrite_task 记录"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F017",
@@ -206,7 +206,7 @@
         "生成待删清单写入 cs_cleanup_logs",
         "按 source_type 读取各自的 TTL 配置"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F018",
@@ -218,7 +218,7 @@
         "超出 max_items 时按 quality_score ASC + created_at ASC 淘汰",
         "生成待删清单"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019",
@@ -230,7 +230,7 @@
         "冷启动失败: exposure_count=0 且 click_count=0 超过 cold_start_ttl_days",
         "生成待删清单"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019b",
@@ -243,7 +243,7 @@
         "POST /api/cleanup/{log_id}/reject 拒绝（延长 TTL）",
         "超时 auto_confirm_after_hours 后自动执行"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F019c",
@@ -255,7 +255,7 @@
         "GET /api/tags/status 返回任务状态（占位）",
         "实际标签挖掘逻辑后续迭代"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F020",
@@ -268,7 +268,7 @@
         "清理按 cron 表达式执行",
         "支持动态添加/移除 feed job"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F021",
@@ -280,7 +280,7 @@
         "手动抓取单个 URL",
         "返回 crawl_task 状态"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F022",
@@ -292,7 +292,7 @@
         "详情返回完整 item 信息",
         "搜索支持关键词匹配 title/content"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F023",
@@ -304,7 +304,7 @@
         "手动触发热搜词采集",
         "返回最新热搜词快照"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F024",
@@ -316,7 +316,7 @@
         "批量触发改写（按 source_type/quality 筛选）",
         "查看改写任务状态"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F025",
@@ -331,7 +331,7 @@
         "POST /api/cleanup/{id}/reject 拒绝",
         "GET /api/cleanup/logs 查看历史日志"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F026",
@@ -343,7 +343,7 @@
         "返回任务列表含 items_found/items_new",
         "分页支持"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F027",
@@ -356,7 +356,7 @@
         "supply crawl now 触发抓取",
         "supply items list 查看内容库"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F028",
@@ -368,7 +368,7 @@
         "Redis item_pool:all 包含新 item ID",
         "相同 URL 不重复入库"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F029",
@@ -380,7 +380,7 @@
         "按热搜词抓取内容 → cs_items 关联 hot_keyword_id",
         "触发改写 → content 变为改写后内容，original_content 保留原文"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "F030",
@@ -392,7 +392,7 @@
         "测试覆盖: models, services, api",
         "使用 SQLite 内存库测试，不依赖外部服务"
       ],
-      "passes": false
+      "passes": true
     }
   ]
 }

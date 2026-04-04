@@ -1,6 +1,35 @@
-"""CLI entry point using Click."""
+"""CLI entry point — calls local API endpoints."""
+
+import json
+import sys
 
 import click
+
+
+def _api(method: str, path: str, data: dict = None, base: str = "http://localhost:8010"):
+    """Call a local API endpoint."""
+    import httpx
+
+    url = f"{base}{path}"
+    try:
+        with httpx.Client(timeout=30) as client:
+            if method == "GET":
+                r = client.get(url, params=data)
+            elif method == "POST":
+                r = client.post(url, json=data)
+            elif method == "PUT":
+                r = client.put(url, json=data)
+            elif method == "DELETE":
+                r = client.delete(url)
+            else:
+                raise ValueError(f"Unknown method: {method}")
+        if r.status_code >= 400:
+            click.echo(f"Error {r.status_code}: {r.text[:200]}", err=True)
+            sys.exit(1)
+        return r.json() if r.text else {}
+    except httpx.ConnectError:
+        click.echo("Error: Cannot connect to API server. Is it running?", err=True)
+        sys.exit(1)
 
 
 @click.group()
@@ -9,6 +38,8 @@ def cli():
     pass
 
 
+# ---------- serve ----------
+
 @cli.command()
 @click.option("--host", default="0.0.0.0", help="Server host")
 @click.option("--port", default=8010, help="Server port")
@@ -16,13 +47,19 @@ def cli():
 def serve(host: str, port: int, reload: bool):
     """Start the API server + scheduler."""
     import uvicorn
-    uvicorn.run(
-        "content_supply.main:app",
-        host=host,
-        port=port,
-        reload=reload,
-    )
+    uvicorn.run("content_supply.main:app", host=host, port=port, reload=reload)
 
+
+# ---------- health ----------
+
+@cli.command()
+def health():
+    """Check API health."""
+    r = _api("GET", "/api/health")
+    click.echo(json.dumps(r, indent=2, ensure_ascii=False))
+
+
+# ---------- feeds ----------
 
 @cli.group()
 def feed():
@@ -35,44 +72,77 @@ def feed():
 @click.argument("url")
 @click.option("--category", default="", help="Feed category")
 @click.option("--interval", default=1800, help="Poll interval in seconds")
-def feed_add(name: str, url: str, category: str, interval: int):
+@click.option("--source-type", default="rss", help="Source type: rss/atom/web")
+def feed_add(name: str, url: str, category: str, interval: int, source_type: str):
     """Add a new feed source."""
-    click.echo(f"Adding feed: {name} ({url})")
+    r = _api("POST", "/api/feeds", {
+        "name": name, "url": url, "category": category,
+        "poll_interval": interval, "source_type": source_type,
+    })
+    click.echo(f"Created feed #{r.get('id', '?')}: {r.get('name', name)}")
 
 
 @feed.command("list")
-def feed_list():
+@click.option("--status", default=None, help="Filter by status")
+@click.option("--limit", default=100, help="Max results")
+def feed_list(status, limit):
     """List all feeds."""
-    click.echo("Listing feeds...")
+    params = {"limit": limit}
+    if status:
+        params["status"] = status
+    feeds = _api("GET", "/api/feeds", params)
+    if not feeds:
+        click.echo("No feeds found.")
+        return
+    for f in feeds:
+        status_icon = "+" if f.get("status") == "active" else "-"
+        click.echo(f"  [{status_icon}] #{f['id']} {f['name']} ({f['source_type']}) "
+                    f"[{f.get('category', '')}] interval={f.get('poll_interval', '?')}s")
 
 
 @feed.command("remove")
-@click.argument("feed_id")
+@click.argument("feed_id", type=int)
 def feed_remove(feed_id: int):
     """Remove a feed."""
-    click.echo(f"Removing feed {feed_id}")
+    _api("DELETE", f"/api/feeds/{feed_id}")
+    click.echo(f"Removed feed #{feed_id}")
 
 
-@cli.group("crawl")
+@feed.command("toggle")
+@click.argument("feed_id", type=int)
+def feed_toggle(feed_id: int):
+    """Toggle feed active/paused."""
+    r = _api("POST", f"/api/feeds/{feed_id}/toggle")
+    click.echo(f"Feed #{feed_id} → {r.get('status', '?')}")
+
+
+# ---------- crawl ----------
+
+@cli.group()
 def crawl():
     """Trigger content crawling."""
     pass
 
 
 @crawl.command("now")
-@click.option("--feed-id", default=None, help="Crawl specific feed")
+@click.option("--feed-id", type=int, default=None, help="Crawl specific feed")
 @click.option("--url", default=None, help="Crawl specific URL")
-def crawl_now(feed_id, url):
+@click.option("--category", default="", help="Category for manual URL")
+def crawl_now(feed_id, url, category):
     """Trigger a crawl job."""
     if url:
-        click.echo(f"Crawling URL: {url}")
+        r = _api("POST", "/api/crawl/url", {"url": url, "category": category})
+        click.echo(f"Crawled URL: {r.get('status', '?')} | found={r.get('items_found', 0)} new={r.get('items_new', 0)}")
     elif feed_id:
-        click.echo(f"Crawling feed {feed_id}")
+        r = _api("POST", f"/api/crawl/feed/{feed_id}")
+        click.echo(f"Crawled feed #{feed_id}: {r.get('status', '?')} | found={r.get('items_found', 0)} new={r.get('items_new', 0)}")
     else:
-        click.echo("Crawling all active feeds...")
+        click.echo("Specify --feed-id or --url")
 
 
-@cli.group("items")
+# ---------- items ----------
+
+@cli.group()
 def items():
     """Manage content items."""
     pass
@@ -81,10 +151,165 @@ def items():
 @items.command("list")
 @click.option("--status", default="published", help="Filter by status")
 @click.option("--source-type", default=None, help="Filter by source type")
+@click.option("--category", default=None, help="Filter by category")
 @click.option("--limit", default=20, help="Max items to show")
-def items_list(status: str, source_type, limit: int):
+def items_list(status: str, source_type, category, limit: int):
     """List content items."""
-    click.echo(f"Listing items (status={status}, limit={limit})")
+    params = {"page_size": limit, "status": status}
+    if source_type:
+        params["source_type"] = source_type
+    if category:
+        params["category"] = category
+    result = _api("GET", "/api/items", params)
+    if not result:
+        click.echo("No items found.")
+        return
+    for item in result:
+        rw = " [R]" if item.get("is_rewritten") else ""
+        click.echo(f"  #{item['id'][:8]}… {item['title'][:60]} | "
+                    f"score={item.get('quality_score', 0):.2f} | {item.get('source_type', '')}{rw}")
+
+
+@items.command("search")
+@click.argument("query")
+@click.option("--limit", default=10, help="Max results")
+def items_search(query: str, limit: int):
+    """Search items by keyword."""
+    r = _api("POST", "/api/items/search", {"query": query, "page_size": limit})
+    if not r:
+        click.echo("No results found.")
+        return
+    for item in r:
+        click.echo(f"  #{item['id'][:8]}… {item['title'][:60]}")
+
+
+# ---------- hot ----------
+
+@cli.group()
+def hot():
+    """Hot keyword tracking."""
+    pass
+
+
+@hot.command("keywords")
+@click.option("--platform", default=None, help="Filter by platform")
+@click.option("--limit", default=20, help="Max results")
+def hot_keywords(platform, limit):
+    """Show trending keywords."""
+    params = {"limit": limit}
+    if platform:
+        params["platform"] = platform
+    r = _api("GET", "/api/hot/keywords", params)
+    if not r:
+        click.echo("No keywords found.")
+        return
+    for kw in r:
+        click.echo(f"  [{kw.get('platform', '?')}] #{kw.get('rank', '?')} "
+                    f"{kw['keyword']} (score={kw.get('hot_score', 0):.0f})")
+
+
+@hot.command("trigger")
+@click.option("--platform", default=None, help="Specific platform")
+def hot_trigger(platform):
+    """Trigger hot keyword collection."""
+    data = {}
+    if platform:
+        data["platform"] = platform
+    r = _api("POST", "/api/hot/trigger", data)
+    click.echo(f"Triggered: {r}")
+
+
+# ---------- rewrite ----------
+
+@cli.group()
+def rewrite():
+    """LLM content rewriting."""
+    pass
+
+
+@rewrite.command("single")
+@click.argument("item_id")
+@click.option("--type", "rewrite_type", default="paraphrase", help="paraphrase/summarize/expand")
+def rewrite_single(item_id: str, rewrite_type: str):
+    """Rewrite a single item."""
+    r = _api("POST", f"/api/rewrite/{item_id}", {"rewrite_type": rewrite_type})
+    click.echo(f"Rewrite task: {r}")
+
+
+@rewrite.command("batch")
+@click.option("--source-type", default=None, help="Filter by source type")
+@click.option("--limit", default=20, help="Max items to rewrite")
+def rewrite_batch(source_type, limit):
+    """Batch rewrite items."""
+    data = {"limit": limit}
+    if source_type:
+        data["source_type"] = source_type
+    r = _api("POST", "/api/rewrite/batch", data)
+    click.echo(f"Batch rewrite: {r}")
+
+
+# ---------- cleanup ----------
+
+@cli.group()
+def cleanup():
+    """Content cleanup management."""
+    pass
+
+
+@cleanup.command("policies")
+def cleanup_policies():
+    """Show cleanup policies."""
+    r = _api("GET", "/api/cleanup/policies")
+    click.echo(json.dumps(r, indent=2, ensure_ascii=False))
+
+
+@cleanup.command("trigger")
+def cleanup_trigger():
+    """Trigger cleanup scan (generates pending review)."""
+    r = _api("POST", "/api/cleanup/trigger")
+    click.echo(f"Scan result: {r}")
+
+
+@cleanup.command("pending")
+def cleanup_pending():
+    """Show pending cleanup reviews."""
+    r = _api("GET", "/api/cleanup/pending")
+    if not r:
+        click.echo("No pending reviews.")
+        return
+    for log in r:
+        click.echo(f"  #{log['id']} | {log['source_type']} | "
+                    f"to_delete={log.get('items_to_delete', 0)} | "
+                    f"auto_confirm={log.get('auto_confirm_at', '?')}")
+
+
+@cleanup.command("confirm")
+@click.argument("log_id", type=int)
+def cleanup_confirm(log_id: int):
+    """Confirm and execute a cleanup."""
+    r = _api("POST", f"/api/cleanup/{log_id}/confirm", {"reviewer": "cli"})
+    click.echo(f"Cleanup #{log_id}: deleted {r.get('items_deleted', 0)} items")
+
+
+@cleanup.command("reject")
+@click.argument("log_id", type=int)
+def cleanup_reject(log_id: int):
+    """Reject a pending cleanup."""
+    _api("POST", f"/api/cleanup/{log_id}/reject", {"reviewer": "cli"})
+    click.echo(f"Cleanup #{log_id} rejected.")
+
+
+@cleanup.command("logs")
+@click.option("--limit", default=20, help="Max results")
+def cleanup_logs(limit: int):
+    """Show cleanup history."""
+    r = _api("GET", "/api/cleanup/logs", {"limit": limit})
+    if not r:
+        click.echo("No cleanup logs.")
+        return
+    for log in r:
+        click.echo(f"  #{log['id']} | {log['status']} | {log['policy']} | "
+                    f"{log['source_type']} | deleted={log.get('items_deleted', 0)}")
 
 
 if __name__ == "__main__":

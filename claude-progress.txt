@@ -19,3 +19,23 @@
   - feature_list.json (31 个功能点)
   - .gitignore
 - **Next**: F005 (API 骨架 + health endpoint) → F006-F007 (Feed CRUD) → F008-F009 (Crawler)
+
+## Session 2 — Coding Agent (main + 3 parallel sub-agents)
+- **Date**: 2026-04-04
+- **Agent**: coder
+- **Feature**: F005-F026 (22 features)
+- **Status**: completed
+- **Done**:
+  - F005-F007: FastAPI app with lifespan, Feed CRUD + toggle API (8 endpoints)
+  - F008-F009: RSS Crawler (feedparser) + Web Scraper (trafilatura + httpx)
+  - F010-F011: HotTracker (HN/Reddit/Google adapters) + HotContentFetcher (DDG search + scrape)
+  - F012-F015: ContentProcessor (dedup/tags/quality) + ItemWriter (MySQL + Redis push)
+  - F016: ContentRewriter (LLM paraphrase/summarize/expand via OpenAI-compatible API)
+  - F017-F019b: CleanupManager (TTL/capacity/quality + cold start) + review workflow + Notification (Webhook/DingTalk/Feishu/WeCom)
+  - F019c: TagMiner placeholder API
+  - F020: APScheduler orchestration (RSS polling + hot tracking + cleanup cron + rewrite)
+  - F021-F026: All remaining API routes (crawl/items/hot/rewrite/cleanup/tags)
+  - 31 API routes registered, 60 unit tests passing
+  - Full schemas (feed/item/task/cleanup), service layer, deps injection
+- **Remaining**: F027 (CLI), F028-F029 (e2e integration), F030 (test suite)
+- **Next**: F027 (CLI 完善) → F028-F030 (集成测试)
