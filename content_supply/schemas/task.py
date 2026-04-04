@@ -1,7 +1,7 @@
 """Task Pydantic schemas."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -27,3 +27,9 @@ class CrawlTaskResponse(BaseModel):
 class CrawlUrlRequest(BaseModel):
     url: str
     category: str = ""
+
+
+class CrawledContentResponse(BaseModel):
+    """Detailed response for /crawl/url including extracted content."""
+    task: CrawlTaskResponse
+    item: Optional[dict[str, Any]] = None

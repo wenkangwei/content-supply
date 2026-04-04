@@ -1,0 +1,101 @@
+site_name: Content Supply Platform
+site_description: 多源内容采集、LLM 改写与智能内容池管理平台
+site_author: AI Project Team
+copyright: Copyright &copy; 2026 AI Project
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: 切换暗色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: 切换亮色模式
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+
+nav:
+  - 首页: index.md
+  - 快速开始:
+      - 安装部署: getting-started/installation.md
+      - 五分钟体验: getting-started/quickstart.md
+  - 产品概述:
+      - 需求背景: overview/background.md
+      - 产品架构: overview/architecture.md
+      - 核心能力: overview/capabilities.md
+  - 功能模块:
+      - RSS 订阅抓取: modules/rss-crawler.md
+      - 网页内容抓取: modules/web-scraper.md
+      - 热搜词采集: modules/hot-tracker.md
+      - 内容改写引擎: modules/content-rewriter.md
+      - 内容处理管线: modules/content-processor.md
+      - 内容池管理: modules/content-pool.md
+      - 过期清理策略: modules/cleanup.md
+      - 标签挖掘: modules/tag-miner.md
+      - 任务调度器: modules/scheduler.md
+  - API 参考:
+      - 概述: api/overview.md
+      - Feed 管理: api/feeds.md
+      - 内容抓取: api/crawl.md
+      - 内容查询: api/items.md
+      - 热搜采集: api/hot.md
+      - 内容改写: api/rewrite.md
+      - 清理管理: api/cleanup.md
+      - 标签挖掘: api/tags.md
+  - 使用案例:
+      - RSS 自动采集: use-cases/rss-pipeline.md
+      - 热点追踪: use-cases/hot-tracking.md
+      - 内容改写: use-cases/content-rewriting.md
+      - 与推荐系统对接: use-cases/rec-integration.md
+  - CLI 手册: cli.md
+  - 配置参考: configuration.md
+  - 路线图: roadmap.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables

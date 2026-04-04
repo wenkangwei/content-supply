@@ -393,6 +393,104 @@
         "使用 SQLite 内存库测试，不依赖外部服务"
       ],
       "passes": true
+    },
+    {
+      "id": "F031",
+      "category": "crawler",
+      "priority": 2,
+      "description": "Playwright 浏览器抓取 — 支持JS渲染页面（SPA/动态加载/反爬验证）",
+      "steps": [
+        "集成 playwright async API，支持 headless 浏览器渲染",
+        "对 trafilatura 提取失败或内容过短的页面，自动降级到 Playwright",
+        "支持 agent 模拟（cookie/登录态/滚动等待/点击加载更多）",
+        "微信公众号完整支持（登录态模拟、阅读更多展开）",
+        "新增 PlaywrightScraper 服务 + 配置项",
+        "在 WebScraper 中作为 fallback 自动调用"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F032",
+      "category": "security",
+      "priority": 1,
+      "description": "安全加固 — API 认证 + 输入校验 + 速率限制",
+      "steps": [
+        "API Key / Bearer Token 认证中间件",
+        "sort_by 参数白名单校验（防 SQLAlchemy 属性泄漏）",
+        "rewrite_type / status 参数 Enum 校验",
+        "慢速限流：crawl/rewrite/cleanup 等重操作端点限速",
+        "CORS 中间件配置",
+        "webhook token 不记录到日志"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F033",
+      "category": "performance",
+      "priority": 2,
+      "description": "性能优化 — 批量写入 + 异步阻塞修复 + 连接复用",
+      "steps": [
+        "ItemWriter.write_batch 批量去重查询 + bulk insert",
+        "RSSCrawler feedparser.parse 用 asyncio.to_thread 包裹",
+        "WebScraper 复用 httpx.AsyncClient（单例）",
+        "CleanupManager execute_cleanup 批量 DELETE WHERE id IN (...)",
+        "content_hash 改为全文本哈希（非仅前1000字符）"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F034",
+      "category": "quality",
+      "priority": 2,
+      "description": "中文内容支持优化 — jieba 分词 + 中文标签提取",
+      "steps": [
+        "集成 jieba 分词库",
+        "标签提取对中文内容使用 jieba 提取关键词替代单字 bigram",
+        "质量评分适配中文内容长度标准"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F035",
+      "category": "infra",
+      "priority": 3,
+      "description": "基础设施 — 健康检查增强 + 数据库迁移 + 优雅停机",
+      "steps": [
+        "/api/health 增加 DB/Redis/LLM 连通性检查",
+        "引入 Alembic 数据库迁移管理",
+        "Scheduler shutdown(wait=True) 优雅停机",
+        "datetime.now() 统一改为 datetime.now(UTC)",
+        "配置化日志级别",
+        "pyproject.toml 补充 aiosqlite 依赖"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F036",
+      "category": "test",
+      "priority": 3,
+      "description": "测试补全 — API 端点测试 + 服务单元测试",
+      "steps": [
+        "所有 API 端点的 HTTP 状态码/响应格式测试",
+        "FeedManager / CleanupManager / NotificationService 单元测试",
+        "Scheduler 任务编排测试",
+        "边界条件测试：空内容、重复 URL、Redis 失败降级"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F037",
+      "category": "api",
+      "priority": 3,
+      "description": "API 增强 — 分页元数据 + 热搜词国内平台适配器 + API 版本化",
+      "steps": [
+        "Items 列表返回 {items, total, page, page_size} 分页元数据",
+        "实现百度/微博/知乎/抖音热搜适配器（当前仅有 HN/Reddit/Google）",
+        "API 路由加 /v1/ 前缀",
+        "新增 DELETE /items/{id} 端点",
+        "新增 GET /rewrite/tasks/{id} 改写任务详情"
+      ],
+      "passes": false
     }
   ]
 }
