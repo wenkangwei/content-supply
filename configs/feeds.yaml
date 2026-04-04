@@ -1,0 +1,18 @@
+feeds:
+  - name: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+    source_type: "rss"
+    category: "tech"
+    poll_interval: 1800
+
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    source_type: "rss"
+    category: "tech"
+    poll_interval: 3600
+
+  - name: "36Kr"
+    url: "https://36kr.com/feed"
+    source_type: "rss"
+    category: "tech"
+    poll_interval: 3600

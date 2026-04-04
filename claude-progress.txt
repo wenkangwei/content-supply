@@ -1,0 +1,21 @@
+# Content Supply Platform — Progress Log
+
+## Session 1 — Initializer
+- **Date**: 2026-04-04
+- **Agent**: initializer
+- **Feature**: F001-F004 — 项目骨架、配置、模型、数据库
+- **Status**: completed
+- **Done**:
+  - 创建完整项目目录结构 (configs/, content_supply/{models,schemas,services,api}/, tests/, scripts/)
+  - pyproject.toml 含全部依赖 (FastAPI/SQLAlchemy/httpx/feedparser/trafilatura/APScheduler/Click/OpenAI)
+  - 配置系统: Pydantic Settings + app.yaml + ${env:VAR} 支持
+  - 6 张表 ORM 模型: Feed, Item, CrawlTask, HotKeyword, RewriteTask, CleanupLog
+  - 异步数据库层: SQLAlchemy async engine + session 管理
+  - 4 个配置文件: app.yaml, feeds.yaml, hot_sources.yaml, cleanup_policies.yaml
+  - MySQL DDL 脚本: scripts/init_tables.sql
+  - CLI 骨架: Click 命令 (serve/feed/crawl/items)
+  - 测试 conftest: SQLite 内存库 + async client
+  - CLAUDE.md 开发规范
+  - feature_list.json (31 个功能点)
+  - .gitignore
+- **Next**: F005 (API 骨架 + health endpoint) → F006-F007 (Feed CRUD) → F008-F009 (Crawler)

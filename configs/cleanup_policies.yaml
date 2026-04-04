@@ -1,0 +1,24 @@
+policies:
+  - source_type: "rss"
+    ttl_days: 30
+    max_items: 10000
+    min_quality: 0.2
+
+  - source_type: "web"
+    ttl_days: 60
+    max_items: 5000
+    min_quality: 0.2
+
+  - source_type: "hot_keyword"
+    ttl_days: 7
+    max_items: 5000
+    min_quality: 0.3
+    cold_start_ttl_days: 3
+
+  - source_type: "manual"
+    ttl_days: 90
+    max_items: 2000
+    min_quality: 0.1
+
+cleanup_schedule: "0 3 * * *"
+auto_confirm_after_hours: 24

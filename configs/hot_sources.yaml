@@ -1,0 +1,58 @@
+hot_sources:
+  # 国内平台
+  - platform: "baidu"
+    name: "百度热搜"
+    url: "https://top.baidu.com/board?tab=realtime"
+    category: "general"
+    interval: 1800
+    parser: "html"
+
+  - platform: "weibo"
+    name: "微博热搜"
+    url: "https://weibo.com/ajax/side/hotSearch"
+    category: "general"
+    interval: 1800
+    parser: "json"
+
+  - platform: "zhihu"
+    name: "知乎热榜"
+    url: "https://www.zhihu.com/api/v3/feed/topstory/hot-lists/total"
+    category: "general"
+    interval: 3600
+    parser: "json"
+
+  - platform: "douyin"
+    name: "抖音热点"
+    url: "https://www.douyin.com/hot"
+    category: "general"
+    interval: 1800
+    parser: "html"
+
+  # 海外平台
+  - platform: "google"
+    name: "Google Trends"
+    url: "https://trends.google.com/trending/rss"
+    category: "general"
+    interval: 3600
+    parser: "rss"
+
+  - platform: "twitter"
+    name: "Twitter/X Trending"
+    url: "https://api.twitter.com/2/trends"
+    category: "general"
+    interval: 1800
+    parser: "json"
+
+  - platform: "reddit"
+    name: "Reddit Hot"
+    url: "https://www.reddit.com/r/all/hot.json"
+    category: "general"
+    interval: 1800
+    parser: "json"
+
+  - platform: "hackernews"
+    name: "Hacker News Top"
+    url: "https://hacker-news.firebaseio.com/v0/topstories.json"
+    category: "tech"
+    interval: 1800
+    parser: "json"

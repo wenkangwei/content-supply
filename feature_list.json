@@ -1,0 +1,398 @@
+{
+  "project": "content-supply",
+  "description": "Content supply platform for LLM recommendation system",
+  "features": [
+    {
+      "id": "F001",
+      "category": "setup",
+      "priority": 1,
+      "description": "项目骨架 — 目录结构 + pyproject.toml + 依赖安装 + 所有 __init__.py",
+      "steps": [
+        "确认目录结构完整: configs/, content_supply/{models,schemas,services,api}/, tests/, scripts/",
+        "pip install -e . 成功",
+        "python -c 'import content_supply' 无报错"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F002",
+      "category": "setup",
+      "priority": 1,
+      "description": "配置系统 — Pydantic Settings + app.yaml + feeds.yaml + hot_sources.yaml + cleanup_policies.yaml",
+      "steps": [
+        "load_app_config() 正确加载所有配置段",
+        "环境变量 ${env:VAR:default} 替换正常",
+        "MySQLConfig.dsn 生成正确的连接字符串"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F003",
+      "category": "data",
+      "priority": 1,
+      "description": "数据库模型 — 6 张表 ORM 模型 (Feed, Item, CrawlTask, HotKeyword, RewriteTask, CleanupLog)",
+      "steps": [
+        "所有模型类继承 Base，字段类型与设计一致",
+        "import 所有模型无报错",
+        "create_tables() 能成功建表"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F004",
+      "category": "data",
+      "priority": 1,
+      "description": "数据库连接 — async engine + session 管理",
+      "steps": [
+        "init_db(config) 创建 engine 和 session_factory",
+        "get_session() 提供可用的 async session",
+        "close_db() 正确释放连接"
+      ],
+      "passes": true
+    },
+    {
+      "id": "F005",
+      "category": "api",
+      "priority": 2,
+      "description": "API 骨架 — FastAPI app + health endpoint",
+      "steps": [
+        "uvicorn content_supply.main:app 启动无报错",
+        "GET /api/health 返回 {status: ok}",
+        "lifespan 正确初始化和清理 DB"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F006",
+      "category": "api",
+      "priority": 2,
+      "description": "Feed CRUD API — POST/GET/PUT/DELETE /api/feeds",
+      "steps": [
+        "POST /api/feeds 创建 feed",
+        "GET /api/feeds 返回列表",
+        "PUT /api/feeds/{id} 更新",
+        "DELETE /api/feeds/{id} 删除"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F007",
+      "category": "api",
+      "priority": 2,
+      "description": "Feed toggle — POST /api/feeds/{id}/toggle 暂停/恢复",
+      "steps": [
+        "toggle 将 active 变为 paused",
+        "再次 toggle 恢复为 active"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F008",
+      "category": "crawler",
+      "priority": 2,
+      "description": "RSS Crawler — feedparser 解析 RSS/Atom，标准化为统一格式",
+      "steps": [
+        "给定 RSS feed URL，解析出 entries",
+        "每个 entry 包含 title, url, summary, author, published, image",
+        "处理异常 feed（空内容、网络错误）"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F009",
+      "category": "crawler",
+      "priority": 2,
+      "description": "Web Scraper — trafilatura 提取正文/图片",
+      "steps": [
+        "给定 URL，提取 title + body + main_image",
+        "处理抓取失败（404、超时）",
+        "支持 robots.txt 遵守"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F010",
+      "category": "crawler",
+      "priority": 3,
+      "description": "HotTracker — 热搜词采集（多平台适配器: 百度/微博/知乎/Google/Twitter/Reddit/HN）",
+      "steps": [
+        "每个平台适配器统一输出 [{keyword, rank, hot_score, platform}]",
+        "新采集的词与历史去重",
+        "写入 cs_hot_keywords 表"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F011",
+      "category": "crawler",
+      "priority": 3,
+      "description": "HotContentFetcher — 根据热搜词搜索并抓取相关内容",
+      "steps": [
+        "按关键词搜索相关文章 URL",
+        "调用 Web Scraper 抓取内容",
+        "关联 hot_keyword_id 写入 cs_items"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F012",
+      "category": "processor",
+      "priority": 3,
+      "description": "内容去重 — URL 精确匹配 + content_hash (SHA256) 近似去重",
+      "steps": [
+        "相同 URL 的内容不重复入库",
+        "相同 content_hash 的内容标记为重复",
+        "去重检查在写入前执行"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F013",
+      "category": "processor",
+      "priority": 3,
+      "description": "标签提取 — 关键词提取 + 分类",
+      "steps": [
+        "从 title + content 提取 top-5 关键词作为 tags",
+        "根据 source_name 和内容分类到 category",
+        "标签写入 JSON 字段"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F014",
+      "category": "processor",
+      "priority": 3,
+      "description": "质量评分 — 规则引擎评分 (内容长度 + 图片 + 来源声誉 + 标签丰富度)",
+      "steps": [
+        "评分公式: 长度(0-0.3) + 图片(0-0.2) + 来源(0-0.2) + 标签(0-0.3)",
+        "结果 0-1 范围",
+        "写入 quality_score 字段"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F015",
+      "category": "writer",
+      "priority": 3,
+      "description": "ItemWriter — 写入 MySQL + 推送到 Redis item_pool:all + hot_items:global",
+      "steps": [
+        "写入 cs_items 表成功",
+        "SADD item_pool:all {item_id} 推送到 Redis",
+        "ZADD hot_items:global {quality_score} {item_id} 推送到 Redis",
+        "Redis 推送失败不影响 MySQL 写入"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F016",
+      "category": "rewriter",
+      "priority": 3,
+      "description": "ContentRewriter — LLM 改写 (paraphrase/summarize/expand)，保留 original_content",
+      "steps": [
+        "调用 OpenAI-compatible API 改写内容",
+        "original_content 保留原文，content 写入改写结果",
+        "is_rewritten 标记为 true",
+        "创建 rewrite_task 记录"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F017",
+      "category": "cleanup",
+      "priority": 3,
+      "description": "CleanupManager — TTL 时间过期扫描",
+      "steps": [
+        "扫描 created_at < NOW() - INTERVAL ttl_days DAY 的内容",
+        "生成待删清单写入 cs_cleanup_logs",
+        "按 source_type 读取各自的 TTL 配置"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F018",
+      "category": "cleanup",
+      "priority": 3,
+      "description": "CleanupManager — 容量上限淘汰",
+      "steps": [
+        "统计每个 source_type 的 item 数量",
+        "超出 max_items 时按 quality_score ASC + created_at ASC 淘汰",
+        "生成待删清单"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019",
+      "category": "cleanup",
+      "priority": 3,
+      "description": "CleanupManager — 质量淘汰 + 冷启动失败 TTL 自动删除",
+      "steps": [
+        "扫描 quality_score < min_quality 的内容（保留最近 24h）",
+        "冷启动失败: exposure_count=0 且 click_count=0 超过 cold_start_ttl_days",
+        "生成待删清单"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019b",
+      "category": "cleanup",
+      "priority": 3,
+      "description": "审核通知 — Webhook/Email 发送待删清单 + 确认/拒绝 API + 超时自动确认",
+      "steps": [
+        "扫描完成后通过 Webhook 发送审核通知",
+        "POST /api/cleanup/{log_id}/confirm 确认执行删除",
+        "POST /api/cleanup/{log_id}/reject 拒绝（延长 TTL）",
+        "超时 auto_confirm_after_hours 后自动执行"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F019c",
+      "category": "tag_mining",
+      "priority": 5,
+      "description": "TagMiner — LLM 优质内容标签挖掘（先做接口占位，后续实现）",
+      "steps": [
+        "POST /api/tags/mine 返回 202 Accepted（占位）",
+        "GET /api/tags/status 返回任务状态（占位）",
+        "实际标签挖掘逻辑后续迭代"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F020",
+      "category": "scheduler",
+      "priority": 4,
+      "description": "APScheduler — 统一编排 (RSS 轮询 + 热搜采集 + 清理扫描 + 改写)",
+      "steps": [
+        "启动时注册所有 active feed 的定时抓取 job",
+        "热热搜词按配置间隔采集",
+        "清理按 cron 表达式执行",
+        "支持动态添加/移除 feed job"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F021",
+      "category": "api",
+      "priority": 4,
+      "description": "Crawl API — POST /api/crawl/feed/{id} + POST /api/crawl/url 手动触发",
+      "steps": [
+        "手动触发指定 feed 抓取",
+        "手动抓取单个 URL",
+        "返回 crawl_task 状态"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F022",
+      "category": "api",
+      "priority": 4,
+      "description": "Items API — GET /api/items (分页/筛选) + GET /api/items/{id} + POST /api/items/search",
+      "steps": [
+        "列表支持 source_type/category/status 筛选和分页",
+        "详情返回完整 item 信息",
+        "搜索支持关键词匹配 title/content"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F023",
+      "category": "api",
+      "priority": 4,
+      "description": "Hot API — GET /api/hot/keywords + POST /api/hot/trigger",
+      "steps": [
+        "查看热搜词列表（按 platform 筛选）",
+        "手动触发热搜词采集",
+        "返回最新热搜词快照"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F024",
+      "category": "api",
+      "priority": 4,
+      "description": "Rewrite API — POST /api/rewrite/{item_id} + POST /api/rewrite/batch",
+      "steps": [
+        "手动触发单个 item 改写",
+        "批量触发改写（按 source_type/quality 筛选）",
+        "查看改写任务状态"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F025",
+      "category": "api",
+      "priority": 4,
+      "description": "Cleanup API — 策略查看/手动触发/待审核/确认/拒绝/日志",
+      "steps": [
+        "GET /api/cleanup/policies 查看清理策略配置",
+        "POST /api/cleanup/trigger 手动触发扫描",
+        "GET /api/cleanup/pending 查看待审核清单",
+        "POST /api/cleanup/{id}/confirm 确认删除",
+        "POST /api/cleanup/{id}/reject 拒绝",
+        "GET /api/cleanup/logs 查看历史日志"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F026",
+      "category": "api",
+      "priority": 4,
+      "description": "Tasks API — GET /api/tasks 查看所有任务状态",
+      "steps": [
+        "按 task_type/status 筛选",
+        "返回任务列表含 items_found/items_new",
+        "分页支持"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F027",
+      "category": "cli",
+      "priority": 5,
+      "description": "CLI — supply serve/feed/crawl/items/hot/rewrite/cleanup 命令",
+      "steps": [
+        "supply serve 启动服务",
+        "supply feed add/list/remove 管理 feed",
+        "supply crawl now 触发抓取",
+        "supply items list 查看内容库"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F028",
+      "category": "integration",
+      "priority": 5,
+      "description": "端到端 — RSS → 去重/标签/评分 → MySQL → Redis 推送",
+      "steps": [
+        "添加 RSS feed → 触发抓取 → cs_items 有数据",
+        "Redis item_pool:all 包含新 item ID",
+        "相同 URL 不重复入库"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F029",
+      "category": "integration",
+      "priority": 5,
+      "description": "端到端 — 热搜词采集 → 内容搜索抓取 → LLM 改写 → 入库",
+      "steps": [
+        "触发热搜采集 → cs_hot_keywords 有数据",
+        "按热搜词抓取内容 → cs_items 关联 hot_keyword_id",
+        "触发改写 → content 变为改写后内容，original_content 保留原文"
+      ],
+      "passes": false
+    },
+    {
+      "id": "F030",
+      "category": "test",
+      "priority": 5,
+      "description": "完整测试套件 — 每个模块有独立测试文件",
+      "steps": [
+        "pytest tests/ 全部通过",
+        "测试覆盖: models, services, api",
+        "使用 SQLite 内存库测试，不依赖外部服务"
+      ],
+      "passes": false
+    }
+  ]
+}
