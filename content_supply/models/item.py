@@ -16,12 +16,12 @@ class Item(Base):
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str | None] = mapped_column(Text, nullable=True)
     original_content: Mapped[str | None] = mapped_column(Text, nullable=True)
-    url: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(String(768), unique=True, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_type: Mapped[str] = mapped_column(
-        Enum("rss", "web", "hot_keyword", "manual", name="item_source_type"),
+        Enum("rss", "web", "hot_keyword", "manual", "jimeng", name="item_source_type"),
         default="rss",
     )
     feed_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

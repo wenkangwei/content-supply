@@ -1,0 +1,33 @@
+# 网站源配置 — 自动发现最新文章并抓取
+#
+# 只需填写列表页 URL，系统自动识别文章链接（无需 CSS 选择器）
+#
+# 字段:
+#   name          — 名称（用于日志和 API 调用）
+#   url           — 文章列表页 URL（直接贴浏览器地址）
+#   category      — 内容分类（可选）
+#   poll_interval — 轮询间隔秒（可选，默认 1800）
+#   max_articles  — 每次最多抓取篇数（可选，默认 10）
+#   enabled       — 是否启用定时轮询（可选，默认 false）
+
+web_sources:
+  - name: "Lobsters"
+    url: "https://lobste.rs/"
+    category: "tech"
+    poll_interval: 1800
+    max_articles: 10
+    enabled: true
+
+  - name: "腾讯云开发者"
+    url: "https://cloud.tencent.com/developer/article/2595615"
+    category: "tech"
+    poll_interval: 3600
+    max_articles: 10
+    enabled: true
+
+  - name: "量子位"
+    url: "https://www.qbitai.com/"
+    category: "ai"
+    poll_interval: 1800
+    max_articles: 10
+    enabled: true

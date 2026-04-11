@@ -316,7 +316,7 @@ class TestHotContentFetcher:
 
         with patch.object(fetcher, "_get_client") as get_client:
             client = AsyncMock()
-            client.post = AsyncMock(return_value=mock_resp)
+            client.get = AsyncMock(return_value=mock_resp)
             get_client.return_value = client
 
             urls = await fetcher.search_by_keyword("python")
@@ -345,7 +345,7 @@ class TestHotContentFetcher:
 
         with patch.object(fetcher, "_get_client") as get_client:
             client = AsyncMock()
-            client.post = AsyncMock(return_value=mock_resp)
+            client.get = AsyncMock(return_value=mock_resp)
             get_client.return_value = client
 
             urls = await fetcher.search_by_keyword("test", max_results=2)
@@ -358,7 +358,7 @@ class TestHotContentFetcher:
 
         with patch.object(fetcher, "_get_client") as get_client:
             client = AsyncMock()
-            client.post = AsyncMock(side_effect=Exception("connection failed"))
+            client.get = AsyncMock(side_effect=Exception("connection failed"))
             get_client.return_value = client
 
             urls = await fetcher.search_by_keyword("nonexistent")

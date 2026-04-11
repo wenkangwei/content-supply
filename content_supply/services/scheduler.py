@@ -11,7 +11,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from content_supply.config import load_app_config
+from content_supply.config import CONFIGS_DIR, load_app_config
 from content_supply.db import init_db
 from content_supply.services.feed_manager import FeedManager
 from content_supply.services.rss_crawler import RSSCrawler
@@ -22,6 +22,8 @@ from content_supply.services.hot_content_fetcher import HotContentFetcher
 from content_supply.services.content_rewriter import ContentRewriter
 from content_supply.services.cleanup_manager import CleanupManager
 from content_supply.services.notification import NotificationService
+from content_supply.services.web_source_crawler import WebSourceCrawler
+from content_supply.services.hot_content_fetcher import HotContentFetcher
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,7 @@ class SchedulerOrchestrator:
         self.hot_tracker = HotTracker()
         self.content_rewriter = ContentRewriter()
         self.processor = ContentProcessor()
+        self.web_source_crawler = WebSourceCrawler()
         self.notification = NotificationService(
             webhook_url=self.config.notification.webhook_url,
             auto_confirm_hours=self.config.notification.auto_confirm_after_hours,
@@ -102,12 +105,58 @@ class SchedulerOrchestrator:
             except Exception as e:
                 logger.error(f"Hot track failed: {e}")
 
+    async def _run_hot_content_fetch(self) -> None:
+        """Fetch related articles for unfetched hot keywords."""
+        async with self.session_factory() as session:
+            try:
+                fetcher = HotContentFetcher()
+                writer = ItemWriter(session)
+
+                stmt = (
+                    select(HotKeyword)
+                    .where(HotKeyword.content_fetched == False)
+                    .order_by(HotKeyword.hot_score.desc())
+                    .limit(10)
+                )
+                result = await session.execute(stmt)
+                keywords = list(result.scalars().all())
+
+                if not keywords:
+                    logger.info("Hot content fetch: no unfetched keywords")
+                    return
+
+                total_new = 0
+                for kw in keywords:
+                    try:
+                        items = await fetcher.fetch_content(
+                            keyword=kw.keyword,
+                            platform=kw.platform,
+                            max_results=3,
+                        )
+                        count = 0
+                        for item in items:
+                            r = await writer.write(item)
+                            if r:
+                                count += 1
+                        total_new += count
+                        kw.content_fetched = True
+                        kw.status = "done"
+                    except Exception as e:
+                        logger.warning("Hot content fetch failed for '%s': %s", kw.keyword, e)
+                        kw.status = "failed"
+
+                await fetcher.close()
+                await session.commit()
+                logger.info(f"Hot content fetch: {len(keywords)} keywords, {total_new} new articles")
+            except Exception as e:
+                logger.error(f"Hot content fetch batch failed: {e}")
+
     async def _run_cleanup(self) -> None:
         """Run cleanup scan (generates pending reviews, does NOT auto-delete)."""
         async with self.session_factory() as session:
             try:
                 policies = yaml.safe_load(
-                    open(self.config.configs_dir / "cleanup_policies.yaml")
+                    open(CONFIGS_DIR / "cleanup_policies.yaml")
                 )
                 mgr = CleanupManager(session, policies)
                 logs = await mgr.scan_all()
@@ -176,9 +225,63 @@ class SchedulerOrchestrator:
     def _load_active_feeds(self) -> list[dict]:
         """Load active feeds from config."""
         feeds_config = yaml.safe_load(
-            open(self.config.configs_dir / "feeds.yaml")
+            open(CONFIGS_DIR / "feeds.yaml")
         )
         return feeds_config.get("feeds", [])
+
+    def _load_web_sources(self) -> list[dict]:
+        """Load web source configs."""
+        try:
+            ws_config = yaml.safe_load(
+                open(CONFIGS_DIR / "web_sources.yaml")
+            )
+            return [s for s in ws_config.get("web_sources", []) if s.get("enabled", False)]
+        except FileNotFoundError:
+            logger.info("No web_sources.yaml found, skipping web source scheduling")
+            return []
+
+    async def _run_web_source(self, name: str, source_config: dict) -> None:
+        """Execute web source crawl for a configured site."""
+        async with self.session_factory() as session:
+            try:
+                from content_supply.services.item_writer import ItemWriter
+                from content_supply.models.crawl_task import CrawlTask
+                from datetime import datetime
+
+                task = CrawlTask(
+                    url=source_config["url"],
+                    task_type="web",
+                    status="running",
+                )
+                session.add(task)
+                await session.flush()
+
+                items = await self.web_source_crawler.crawl_source(source_config)
+                task.items_found = len(items)
+
+                writer = ItemWriter(session)
+                count = 0
+                for item in items:
+                    result = await writer.write(item)
+                    if result:
+                        count += 1
+
+                task.items_new = count
+                task.status = "done"
+                task.finished_at = datetime.now()
+                await session.commit()
+                logger.info(
+                    "WebSource '%s': found=%d new=%d", name, len(items), count
+                )
+            except Exception as e:
+                logger.error("WebSource '%s' crawl failed: %s", name, e)
+                try:
+                    task.status = "failed"
+                    task.error_message = str(e)
+                    task.finished_at = datetime.now()
+                    await session.commit()
+                except Exception:
+                    pass
 
     def start(self) -> None:
         """Register all jobs and start the scheduler."""
@@ -202,6 +305,27 @@ class SchedulerOrchestrator:
                 IntervalTrigger(seconds=cfg.hot_track_interval),
                 id="hot_track",
                 name="Hot Keyword Tracking",
+            )
+
+        # Hot keyword → content fetching (runs after keywords are collected)
+        hot_content_interval = getattr(cfg, "hot_content_fetch_interval", 0)
+        if hot_content_interval > 0:
+            self.scheduler.add_job(
+                self._run_hot_content_fetch,
+                IntervalTrigger(seconds=hot_content_interval),
+                id="hot_content_fetch",
+                name="Hot Content Fetch",
+            )
+
+        # Web source crawling
+        web_sources = self._load_web_sources()
+        for i, ws in enumerate(web_sources):
+            self.scheduler.add_job(
+                self._run_web_source,
+                IntervalTrigger(seconds=ws.get("poll_interval", cfg.rss_default_interval)),
+                id=f"web_source_{i}",
+                name=f"WebSource: {ws['name']}",
+                kwargs={"name": ws["name"], "source_config": ws},
             )
 
         # Cleanup scan
@@ -252,7 +376,7 @@ class SchedulerOrchestrator:
         async with self.session_factory() as session:
             try:
                 policies = yaml.safe_load(
-                    open(self.config.configs_dir / "cleanup_policies.yaml")
+                    open(CONFIGS_DIR / "cleanup_policies.yaml")
                 )
                 mgr = CleanupManager(session, policies)
                 auto_ids = await mgr.check_auto_confirm()

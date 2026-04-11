@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# cs — Content Supply Platform 快捷命令
+# 用法: cs <command> [args...]
+# 无参数或 --help 显示帮助
+
+set -euo pipefail
+
+BASE_URL="${CS_URL:-http://localhost:8010}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'  # No Color
+
+_fmt() {
+    if [ -n "${CS_FMT:-}" ]; then
+        $CS_FMT
+    elif command -v jq &>/dev/null; then
+        jq . 2>/dev/null || cat
+    else
+        cat
+    fi
+}
+
+cs_get() {
+    curl -s "${BASE_URL}$1" | _fmt
+}
+
+cs_post() {
+    curl -s -X POST "${BASE_URL}$1" \
+        -H "Content-Type: application/json" \
+        ${2:+-d "$2"} | _fmt
+}
+
+cs_delete() {
+    curl -s -X DELETE "${BASE_URL}$1" | _fmt
+}
+
+show_help() {
+    echo -e "${CYAN}Content Supply Platform CLI${NC}"
+    echo ""
+    echo "Usage: cs <command> [args...]"
+    echo ""
+    echo -e "${YELLOW}Health:${NC}"
+    echo "  cs health                        健康检查"
+    echo ""
+    echo -e "${YELLOW}Feed 管理:${NC}"
+    echo "  cs feeds                         列出所有 Feed"
+    echo "  cs feeds add <name> <url>        添加 Feed"
+    echo "  cs feeds toggle <id>             暂停/恢复 Feed"
+    echo "  cs feeds remove <id>             删除 Feed"
+    echo ""
+    echo -e "${YELLOW}内容抓取:${NC}"
+    echo "  cs crawl feed <id>               触发 Feed 抓取"
+    echo "  cs crawl url <url>               抓取单个 URL"
+    echo "  cs crawl jimeng                  抓取即梦 AI 作品"
+    echo "  cs crawl web-source              列出网站源"
+    echo "  cs crawl web-source <name>       触发网站源抓取"
+    echo ""
+    echo -e "${YELLOW}内容查询:${NC}"
+    echo "  cs items [page_size]             内容列表 (默认20)"
+    echo "  cs items get <id>                内容详情"
+    echo "  cs items search <query>          搜索内容"
+    echo ""
+    echo -e "${YELLOW}热搜词:${NC}"
+    echo "  cs hot keywords                  查看热搜词"
+    echo "  cs hot trigger                   触发采集"
+    echo "  cs hot fetch                     批量抓取热搜词相关文章"
+    echo "  cs hot fetch <keyword_id>        抓取指定热搜词的相关文章"
+    echo ""
+    echo -e "${YELLOW}改写:${NC}"
+    echo "  cs rewrite <item_id> [type]      改写内容 (默认 paraphrase)"
+    echo ""
+    echo -e "${YELLOW}清理:${NC}"
+    echo "  cs cleanup policies              查看策略"
+    echo "  cs cleanup trigger               触发扫描"
+    echo "  cs cleanup pending               待审核清单"
+    echo "  cs cleanup confirm <id>          确认删除"
+    echo "  cs cleanup reject <id>           拒绝删除"
+    echo "  cs cleanup logs                  清理日志"
+    echo ""
+    echo -e "${YELLOW}任务:${NC}"
+    echo "  cs tasks [status]                查看抓取任务"
+    echo ""
+    echo -e "${YELLOW}环境变量:${NC}"
+    echo "  CS_URL     API 地址 (默认 http://localhost:8010)"
+    echo "  CS_FMT     输出格式化命令 (默认 jq)"
+    echo ""
+    echo -e "也可使用完整 CLI: ${GREEN}supply <command>${NC}"
+}
+
+case "${1:-}" in
+    health)
+        cs_get "/api/health"
+        ;;
+    feeds)
+        case "${2:-}" in
+            add)
+                [ -z "${3:-}" ] || [ -z "${4:-}" ] && { echo "Usage: cs feeds add <name> <url> [category]"; exit 1; }
+                cs_post "/feeds" "{\"name\":\"$3\",\"url\":\"$4\",\"category\":\"${5:-}\"}"
+                echo -e "\n${GREEN}Feed added${NC}"
+                ;;
+            toggle)
+                [ -z "${3:-}" ] && { echo "Usage: cs feeds toggle <id>"; exit 1; }
+                cs_post "/feeds/$3/toggle"
+                ;;
+            remove)
+                [ -z "${3:-}" ] && { echo "Usage: cs feeds remove <id>"; exit 1; }
+                cs_delete "/feeds/$3"
+                echo -e "\n${GREEN}Feed removed${NC}"
+                ;;
+            *)
+                cs_get "/feeds?limit=100"
+                ;;
+        esac
+        ;;
+    crawl)
+        case "${2:-}" in
+            feed)
+                [ -z "${3:-}" ] && { echo "Usage: cs crawl feed <id>"; exit 1; }
+                cs_post "/crawl/feed/$3"
+                ;;
+            url)
+                [ -z "${3:-}" ] && { echo "Usage: cs crawl url <url>"; exit 1; }
+                cs_post "/crawl/url" "{\"url\":\"$3\"}"
+                ;;
+            jimeng)
+                cs_post "/crawl/jimeng"
+                ;;
+            web-source)
+                if [ -z "${3:-}" ]; then
+                    cs_get "/crawl/web-sources"
+                else
+                    cs_post "/crawl/web-source/$3"
+                fi
+                ;;
+            *)
+                echo "Usage: cs crawl {feed|url|jimeng|web-source} [args]"
+                exit 1
+                ;;
+        esac
+        ;;
+    items)
+        case "${2:-}" in
+            get)
+                [ -z "${3:-}" ] && { echo "Usage: cs items get <id>"; exit 1; }
+                cs_get "/items/$3"
+                ;;
+            search)
+                [ -z "${3:-}" ] && { echo "Usage: cs items search <query>"; exit 1; }
+                cs_post "/items/search" "{\"query\":\"$3\",\"page_size\":${4:-20}}"
+                ;;
+            *)
+                cs_get "/items?page_size=${2:-20}&status=published"
+                ;;
+        esac
+        ;;
+    hot)
+        case "${2:-}" in
+            keywords)
+                cs_get "/hot/keywords?limit=${3:-20}"
+                ;;
+            trigger)
+                cs_post "/hot/trigger"
+                ;;
+            fetch)
+                if [ -n "${3:-}" ]; then
+                    cs_post "/hot/$3/fetch-content"
+                else
+                    cs_post "/hot/fetch-content" "{\"max_keywords\":10}"
+                fi
+                ;;
+            *)
+                echo "Usage: cs hot {keywords|trigger|fetch [keyword_id]}"
+                exit 1
+                ;;
+        esac
+        ;;
+    rewrite)
+        [ -z "${2:-}" ] && { echo "Usage: cs rewrite <item_id> [paraphrase|summarize|expand]"; exit 1; }
+        cs_post "/rewrite/$2" "{\"rewrite_type\":\"${3:-paraphrase}\"}"
+        ;;
+    cleanup)
+        case "${2:-}" in
+            policies)
+                cs_get "/cleanup/policies"
+                ;;
+            trigger)
+                cs_post "/cleanup/trigger"
+                ;;
+            pending)
+                cs_get "/cleanup/pending"
+                ;;
+            confirm)
+                [ -z "${3:-}" ] && { echo "Usage: cs cleanup confirm <id>"; exit 1; }
+                cs_post "/cleanup/$3/confirm" "{\"reviewer\":\"cli\"}"
+                ;;
+            reject)
+                [ -z "${3:-}" ] && { echo "Usage: cs cleanup reject <id>"; exit 1; }
+                cs_post "/cleanup/$3/reject" "{\"reviewer\":\"cli\"}"
+                ;;
+            logs)
+                cs_get "/cleanup/logs?limit=${3:-20}"
+                ;;
+            *)
+                echo "Usage: cs cleanup {policies|trigger|pending|confirm|reject|logs}"
+                exit 1
+                ;;
+        esac
+        ;;
+    tasks)
+        status_filter="${2:-}"
+        if [ -n "$status_filter" ]; then
+            cs_get "/tasks?limit=20&status=$status_filter"
+        else
+            cs_get "/tasks?limit=20"
+        fi
+        ;;
+    --help|-h|"")
+        show_help
+        ;;
+    *)
+        echo -e "${RED}Unknown command: $1${NC}"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac

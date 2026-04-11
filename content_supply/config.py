@@ -43,6 +43,7 @@ class SchedulerConfig(BaseSettings):
     enabled: bool = True
     rss_default_interval: int = 1800  # seconds
     hot_track_interval: int = 3600  # seconds
+    hot_content_fetch_interval: int = 0  # 0 = disabled, >0 = seconds
     cleanup_cron: str = "0 3 * * *"  # daily 3am
     rewrite_cron: str = "0 4 * * *"  # daily 4am
     tag_mining_cron: str = "0 2 * * 0"  # weekly sunday 2am

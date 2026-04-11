@@ -22,6 +22,7 @@ scheduler:
   enabled: true
   rss_default_interval: 1800
   hot_track_interval: 3600
+  hot_content_fetch_interval: 0
   cleanup_cron: "0 3 * * *"
   rewrite_cron: "0 4 * * *"
   tag_mining_cron: "0 2 * * 0"

@@ -24,8 +24,24 @@ class ItemWriter:
         redis_client: Optional[aioredis.Redis] = None,
     ):
         self.session = session
-        self.redis = redis_client
+        self.redis = redis_client or self._try_connect_redis()
         self.processor = ContentProcessor()
+
+    @staticmethod
+    def _try_connect_redis() -> Optional[aioredis.Redis]:
+        """Try to connect to Redis using app config. Returns None on failure."""
+        try:
+            from content_supply.config import load_app_config
+            config = load_app_config()
+            return aioredis.Redis(
+                host=config.redis.host,
+                port=config.redis.port,
+                db=config.redis.db,
+                password=config.redis.password,
+                decode_responses=True,
+            )
+        except Exception:
+            return None
 
     async def write(
         self,
@@ -76,8 +92,20 @@ class ItemWriter:
         # 5. Flush to persist
         await self.session.flush()
 
-        # 6. Push to Redis
+        # 6. Push to Redis (item pool + hot ranking + feature hash)
         await self._push_to_redis(item_id, quality_score)
+        await self.push_item_feat_to_redis(
+            item_id=item_id,
+            title=item.title or "",
+            category=getattr(item, "extra", {}).get("category", ""),
+            tags=tags,
+            author=item.author or "",
+            source_type=item.source_type,
+            source_name=item.source_name or "",
+            image_url=item.image_url or "",
+            quality_score=quality_score,
+            published_at=item.published_at.isoformat() if item.published_at else "",
+        )
 
         logger.info("Item written: id=%s title=%.60s", item_id, item.title)
         return db_item
@@ -106,3 +134,40 @@ class ItemWriter:
             await pipe.execute()
         except Exception as e:
             logger.warning("Redis push failed for %s: %s", item_id, e)
+
+    async def push_item_feat_to_redis(
+        self,
+        item_id: str,
+        title: str,
+        category: str = "",
+        tags: list[str] | None = None,
+        author: str = "",
+        source_type: str = "",
+        source_name: str = "",
+        image_url: str = "",
+        quality_score: float = 0.0,
+        published_at: Optional[str] = None,
+    ) -> None:
+        """Push item feature hash to Redis for rec-platform consumption.
+
+        Key pattern: ``item_feat:{item_id}`` — HASH with fields matching
+        rec-platform's seed_test_data format so recall channels can read directly.
+        """
+        if not self.redis:
+            return
+        try:
+            feat_key = f"item_feat:{item_id}"
+            mapping = {
+                "item_id": item_id,
+                "title": title,
+                "category": category,
+                "tags": json.dumps(tags or [], ensure_ascii=False),
+                "author": author or source_name or "",
+                "source_type": source_type,
+                "image_url": image_url,
+                "score": quality_score,
+                "created_at": published_at or "",
+            }
+            await self.redis.hset(feat_key, mapping=mapping)
+        except Exception as e:
+            logger.warning("Redis item_feat push failed for %s: %s", item_id, e)

@@ -13,7 +13,7 @@ class Feed(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    url: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
+    url: Mapped[str] = mapped_column(String(768), unique=True, nullable=False)
     source_type: Mapped[str] = mapped_column(
         Enum("rss", "atom", "web", "hot_search", name="feed_source_type"),
         default="rss",

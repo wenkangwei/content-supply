@@ -40,38 +40,41 @@ class HotContentFetcher:
     ) -> list[str]:
         """Search for article URLs related to a keyword.
 
-        Uses DuckDuckGo HTML search to find related URLs.
+        Tries DuckDuckGo first, then falls back to Google if DDG returns nothing.
         Returns a list of URLs.
         """
+        urls = await self._search_ddg(keyword, max_results)
+        if not urls:
+            urls = await self._search_google(keyword, max_results)
+        return urls
+
+    async def _search_ddg(self, keyword: str, max_results: int) -> list[str]:
+        """Search via DuckDuckGo HTML."""
         client = self._get_client()
         urls: list[str] = []
 
         try:
-            resp = await client.post(
-                self.DDG_HTML_URL,
-                data={"q": keyword, "b": ""},
+            resp = await client.get(
+                "https://html.duckduckgo.com/html/",
+                params={"q": keyword},
             )
-            resp.raise_for_status()
-            html = resp.text
+            if resp.status_code != 200:
+                logger.debug("DDG returned status %d for '%s'", resp.status_code, keyword[:50])
+                return []
 
-            # DuckDuckGo HTML results contain URLs in the form:
-            # <a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=ENCODED_URL&amp;rut=...">
-            # We parse the uddg parameter from result links.
+            html = resp.text
             pattern = re.compile(r'uddg=([^&"\']+)', re.IGNORECASE)
             matches = pattern.findall(html)
 
-            seen = set()
+            seen: set[str] = set()
             for encoded_url in matches:
                 url = unquote(encoded_url)
                 parsed = urlparse(url)
 
-                # Skip non-http URLs and known non-article domains
                 if parsed.scheme not in ("http", "https"):
                     continue
                 if not parsed.netloc:
                     continue
-
-                # Deduplicate
                 if url in seen:
                     continue
                 seen.add(url)
@@ -81,7 +84,60 @@ class HotContentFetcher:
                     break
 
         except Exception as e:
-            logger.error("Search failed for keyword '%s': %s", keyword, e)
+            logger.debug("DDG search failed for '%s': %s", keyword[:50], e)
+
+        return urls
+
+    async def _search_google(self, keyword: str, max_results: int) -> list[str]:
+        """Fallback: search via Google SERP (no API key, parse HTML)."""
+        client = self._get_client()
+        urls: list[str] = []
+
+        try:
+            resp = await client.get(
+                "https://www.google.com/search",
+                params={"q": keyword, "num": str(max_results + 5)},
+                headers={
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36"
+                    ),
+                    "Accept-Language": "en-US,en;q=0.9",
+                },
+            )
+            if resp.status_code != 200:
+                logger.debug("Google returned status %d for '%s'", resp.status_code, keyword[:50])
+                return []
+
+            html = resp.text
+
+            # Extract actual result URLs from Google's /url?q=... redirects
+            pattern = re.compile(r'/url\?q=(https?://[^&"\']+)', re.IGNORECASE)
+            matches = pattern.findall(html)
+
+            # Fallback: also try data-href and plain href in result blocks
+            if not matches:
+                href_pattern = re.compile(r'href="(https?://(?!www\.google\.|google\.com)[^"]+)"')
+                matches = href_pattern.findall(html)
+
+            seen: set[str] = set()
+            for raw_url in matches:
+                parsed = urlparse(raw_url)
+                # Skip Google internal URLs
+                if "google." in parsed.netloc:
+                    continue
+                if raw_url in seen:
+                    continue
+                seen.add(raw_url)
+                urls.append(raw_url)
+                if len(urls) >= max_results:
+                    break
+
+        except Exception as e:
+            logger.debug("Google search failed for '%s': %s", keyword[:50], e)
+
+        return urls
 
         return urls
 

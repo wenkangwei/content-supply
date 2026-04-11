@@ -33,3 +33,31 @@ class CrawledContentResponse(BaseModel):
     """Detailed response for /crawl/url including extracted content."""
     task: CrawlTaskResponse
     item: Optional[dict[str, Any]] = None
+
+
+class JimengArtwork(BaseModel):
+    """Single Jimeng artwork item."""
+    id: str
+    title: str = ""
+    description: str = ""
+    prompt: str = ""
+    negative_prompt: str = ""
+    cover_url: str = ""
+    cover_url_map: dict[str, str] = {}
+    aspect_ratio: float = 0.0
+    author: str = ""
+    width: int = 0
+    height: int = 0
+    format: str = ""
+    seed: str = ""
+    usage_num: int = 0
+    favorite_num: int = 0
+    create_time: Optional[int] = None
+    detail_url: str = ""
+    image_valid: bool = True
+
+
+class JimengCrawlResponse(BaseModel):
+    """Response for /crawl/jimeng endpoint."""
+    task: CrawlTaskResponse
+    items: list[JimengArtwork] = []

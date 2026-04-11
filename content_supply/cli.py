@@ -140,6 +140,58 @@ def crawl_now(feed_id, url, category):
         click.echo("Specify --feed-id or --url")
 
 
+@crawl.command("url")
+@click.argument("url")
+@click.option("--category", default="", help="Category tag")
+def crawl_url(url: str, category: str):
+    """Scrape a single URL and extract content."""
+    r = _api("POST", "/api/crawl/url", {"url": url, "category": category})
+    task = r.get("task", r)
+    click.echo(f"Status: {task.get('status', '?')}")
+    click.echo(f"Found: {task.get('items_found', 0)} | New: {task.get('items_new', 0)}")
+    item = r.get("item")
+    if item:
+        click.echo(f"Title: {item.get('title', 'N/A')}")
+        click.echo(f"Author: {item.get('author', 'N/A')}")
+        click.echo(f"Content length: {len(item.get('content', ''))}")
+    if task.get("error_message"):
+        click.echo(f"Error: {task['error_message']}")
+
+
+@crawl.command("jimeng")
+def crawl_jimeng():
+    """Batch crawl Jimeng AI artworks."""
+    r = _api("POST", "/api/crawl/jimeng")
+    task = r.get("task", r)
+    click.echo(f"Status: {task.get('status', '?')}")
+    click.echo(f"Found: {task.get('items_found', 0)} | Valid: {task.get('items_new', 0)}")
+    artworks = r.get("items", [])
+    for a in artworks[:5]:
+        click.echo(f"  {a.get('title', 'N/A')[:50]} | by {a.get('author', 'N/A')}")
+    if len(artworks) > 5:
+        click.echo(f"  ... and {len(artworks) - 5} more")
+
+
+@crawl.command("web-source")
+@click.argument("source_name", required=False, default=None)
+def crawl_web_source(source_name: str):
+    """Trigger web source crawl. Omit name to list available sources."""
+    if not source_name:
+        r = _api("GET", "/api/crawl/web-sources")
+        sources = r.get("sources", [])
+        if not sources:
+            click.echo("No web sources configured.")
+            return
+        for s in sources:
+            icon = "+" if s.get("enabled") else "-"
+            click.echo(f"  [{icon}] {s['name']} | {s['list_url'][:60]} | interval={s.get('poll_interval', '?')}s")
+        click.echo("\nUsage: supply crawl web-source <name>")
+        return
+    r = _api("POST", f"/api/crawl/web-source/{source_name}")
+    click.echo(f"WebSource '{source_name}': status={r.get('status', '?')} | "
+                f"found={r.get('items_found', 0)} new={r.get('items_new', 0)}")
+
+
 # ---------- items ----------
 
 @cli.group()
@@ -183,6 +235,37 @@ def items_search(query: str, limit: int):
         click.echo(f"  #{item['id'][:8]}… {item['title'][:60]}")
 
 
+@items.command("get")
+@click.argument("item_id")
+def items_get(item_id: str):
+    """Show item detail."""
+    r = _api("GET", f"/api/items/{item_id}")
+    click.echo(f"ID:       {r.get('id', 'N/A')}")
+    click.echo(f"Title:    {r.get('title', 'N/A')}")
+    click.echo(f"URL:      {r.get('url', 'N/A')}")
+    click.echo(f"Author:   {r.get('author', 'N/A')}")
+    click.echo(f"Source:   {r.get('source_name', 'N/A')} ({r.get('source_type', 'N/A')})")
+    click.echo(f"Score:    {r.get('quality_score', 0):.2f}")
+    click.echo(f"Tags:     {r.get('tags', 'N/A')}")
+    click.echo(f"Status:   {r.get('status', 'N/A')}")
+    click.echo(f"Rewritten:{' Yes' if r.get('is_rewritten') else ' No'}")
+    content = r.get("content", "")
+    if content:
+        preview = content[:500] + ("..." if len(content) > 500 else "")
+        click.echo(f"\nContent preview:\n{preview}")
+
+
+@items.command("delete")
+@click.argument("item_id")
+@click.option("--confirm", is_flag=True, help="Skip confirmation prompt")
+def items_delete(item_id: str, confirm: bool):
+    """Delete an item from content pool."""
+    if not confirm:
+        click.confirm(f"Delete item {item_id}?", abort=True)
+    r = _api("DELETE", f"/api/items/{item_id}")
+    click.echo(f"Deleted: {r}")
+
+
 # ---------- hot ----------
 
 @cli.group()
@@ -214,9 +297,31 @@ def hot_trigger(platform):
     """Trigger hot keyword collection."""
     data = {}
     if platform:
-        data["platform"] = platform
+        data["platforms"] = [platform]
     r = _api("POST", "/api/hot/trigger", data)
-    click.echo(f"Triggered: {r}")
+    click.echo(f"Triggered: platforms={r.get('platforms_fetched', [])} "
+                f"new={r.get('keywords_new', 0)} total={r.get('keywords_total', 0)}")
+
+
+@hot.command("fetch-content")
+@click.option("--keyword-id", type=int, default=None, help="Fetch for specific keyword ID")
+@click.option("--max-keywords", default=10, help="Batch: max keywords to process")
+@click.option("--platform", default=None, help="Filter by platform")
+def hot_fetch_content(keyword_id, max_keywords, platform):
+    """Fetch related articles for hot keywords."""
+    if keyword_id:
+        r = _api("POST", f"/api/hot/{keyword_id}/fetch-content")
+        click.echo(f"Keyword: {r.get('keyword', '?')} | "
+                    f"found={r.get('items_found', 0)} new={r.get('items_new', 0)}")
+        if r.get("message"):
+            click.echo(f"  {r['message']}")
+    else:
+        params = {"max_keywords": max_keywords}
+        if platform:
+            params["platform"] = platform
+        r = _api("POST", "/api/hot/fetch-content", params)
+        click.echo(f"Processed: {r.get('keywords_processed', 0)}/{r.get('total_keywords', 0)} keywords | "
+                    f"found={r.get('items_found', 0)} new={r.get('items_new', 0)}")
 
 
 # ---------- rewrite ----------
@@ -310,6 +415,37 @@ def cleanup_logs(limit: int):
     for log in r:
         click.echo(f"  #{log['id']} | {log['status']} | {log['policy']} | "
                     f"{log['source_type']} | deleted={log.get('items_deleted', 0)}")
+
+
+# ---------- tasks ----------
+
+@cli.group()
+def tasks():
+    """View crawl task history."""
+    pass
+
+
+@tasks.command("list")
+@click.option("--task-type", default=None, help="Filter: rss/web/manual/hot_keyword")
+@click.option("--status", default=None, help="Filter: pending/running/done/failed")
+@click.option("--limit", default=20, help="Max results")
+def tasks_list(task_type, status, limit):
+    """List crawl tasks."""
+    params = {"limit": limit}
+    if task_type:
+        params["task_type"] = task_type
+    if status:
+        params["status"] = status
+    r = _api("GET", "/api/tasks", params)
+    if not r:
+        click.echo("No tasks found.")
+        return
+    for t in r:
+        click.echo(f"  #{t['id']} | {t['task_type']} | {t['status']} | "
+                    f"found={t.get('items_found', 0)} new={t.get('items_new', 0)} | "
+                    f"{t.get('url', '')[:50]}")
+        if t.get("error_message"):
+            click.echo(f"         Error: {t['error_message'][:80]}")
 
 
 if __name__ == "__main__":
