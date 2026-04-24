@@ -8,6 +8,8 @@
 
 ---
 
+![Content Supply Platform](docs/images/content-supply.jpg)
+
 ## 一句话介绍
 
 Content Supply Platform 是一个独立的**内容供给中间件**，介于外部内容源和推荐系统之间：
