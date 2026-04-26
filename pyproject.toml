@@ -12,6 +12,7 @@ dependencies = [
     # Database
     "sqlalchemy[asyncio]>=2.0.0",
     "aiomysql>=0.2.0",
+    "aiosqlite>=0.20.0",
     # Redis
     "redis>=5.0.0",
     # HTTP client
@@ -30,7 +31,6 @@ dependencies = [
     # CLI
     "click>=8.1.0",
     # Utilities
-    "python-slugify>=8.0.0",
 ]
 
 [project.optional-dependencies]
