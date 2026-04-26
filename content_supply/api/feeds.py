@@ -3,6 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from content_supply.api.deps import get_db
@@ -28,8 +29,12 @@ async def list_feeds(
 @router.post("/feeds", response_model=FeedResponse, status_code=201)
 async def create_feed(data: FeedCreate, db: AsyncSession = Depends(get_db)):
     mgr = FeedManager(db)
-    feed = await mgr.create_feed(data)
-    await db.commit()
+    try:
+        feed = await mgr.create_feed(data)
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, f"Feed with URL '{data.url}' already exists")
     return feed
 
 
