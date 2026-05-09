@@ -1,0 +1,188 @@
+[
+  {
+    "id": "F001",
+    "category": "setup",
+    "priority": 1,
+    "description": "项目骨架初始化：Vite + React + TS + TailwindCSS + 路由 + API层",
+    "steps": [
+      "npm run type-check 通过",
+      "npm run build 成功输出 dist/",
+      "npm run dev 启动无报错",
+      "页面路由可访问"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F002",
+    "category": "setup",
+    "priority": 1,
+    "description": "API 客户端层：Axios 实例、拦截器、所有模块 API 函数",
+    "steps": [
+      "所有 API 函数有正确的 TypeScript 类型",
+      "拦截器正确解包响应",
+      "错误处理正确捕获并抛出"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F003",
+    "category": "ui",
+    "priority": 1,
+    "description": "布局组件：MainLayout + Header + Sidebar 暗色主题",
+    "steps": [
+      "Sidebar 导航项正确高亮当前路由",
+      "Header 搜索框可见",
+      "暗色主题色板一致"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F004",
+    "category": "ui",
+    "priority": 1,
+    "description": "基础 UI 组件：Button, Badge, Spinner, Pagination, EmptyState",
+    "steps": [
+      "Button 支持 primary/secondary/danger/ghost 变体",
+      "Badge 支持 success/warning/danger 变体",
+      "Pagination 正确计算页数",
+      "Spinner 动画流畅"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F005",
+    "category": "functional",
+    "priority": 2,
+    "description": "仪表板页面：统计卡片（内容总数、已发布、订阅源、热搜词）",
+    "steps": [
+      "调用 getItemCount、getFeeds、getHotKeywords",
+      "统计卡片正确显示数字",
+      "加载中显示 Spinner"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F006",
+    "category": "functional",
+    "priority": 2,
+    "description": "内容池页面：内容列表 + 搜索 + 筛选 + 分页",
+    "steps": [
+      "内容卡片正确展示标题/摘要/标签/质量分",
+      "搜索框可输入并触发搜索",
+      "来源类型筛选正常",
+      "分页控件可用"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F007",
+    "category": "functional",
+    "priority": 2,
+    "description": "内容详情页面：完整内容展示 + 改写/归档操作",
+    "steps": [
+      "通过 ID 获取内容详情",
+      "标题、摘要、正文、标签正确展示",
+      "改写按钮可触发改写",
+      "归档按钮可更新状态"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F008",
+    "category": "functional",
+    "priority": 2,
+    "description": "Feed 管理页面：Feed 列表 + 创建 + 删除 + 状态切换 + 手动爬取",
+    "steps": [
+      "Feed 列表正确展示",
+      "创建表单可添加新 Feed",
+      "状态切换 active/paused",
+      "删除功能正常",
+      "手动爬取触发成功"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F009",
+    "category": "functional",
+    "priority": 2,
+    "description": "爬取中心页面：手动 URL 爬取 + 结果展示",
+    "steps": [
+      "URL 输入框可用",
+      "爬取按钮触发请求",
+      "成功/失败结果正确展示"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F010",
+    "category": "functional",
+    "priority": 2,
+    "description": "热搜监控页面：热搜词列表 + 平台筛选 + 触发采集",
+    "steps": [
+      "热搜词列表正确展示排名/热度",
+      "平台筛选标签可用",
+      "触发采集按钮正常"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F011",
+    "category": "functional",
+    "priority": 3,
+    "description": "内容改写页面：批量改写表单 + 模式选择",
+    "steps": [
+      "改写模式选择可用",
+      "来源类型筛选可用",
+      "批量改写按钮触发成功"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F012",
+    "category": "functional",
+    "priority": 3,
+    "description": "清理管理页面：策略展示 + 待审核列表 + 确认/拒绝",
+    "steps": [
+      "清理策略表格展示",
+      "待审核列表展示",
+      "确认/拒绝按钮正常"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F013",
+    "category": "setup",
+    "priority": 1,
+    "description": "自动化工作流：auto_run.sh 脚本 + feature_list.json",
+    "steps": [
+      "auto_run.sh 可执行",
+      "feature_list.json 格式正确",
+      "claude-progress.txt 初始化"
+    ],
+    "passes": true
+  },
+  {
+    "id": "F014",
+    "category": "setup",
+    "priority": 1,
+    "description": "产品文档：TensorFlow Docs 风格的 mkdocs 文档站",
+    "steps": [
+      "mkdocs.yml 配置正确",
+      "文档首页可访问",
+      "所有章节内容完整"
+    ],
+    "passes": false
+  },
+  {
+    "id": "F015",
+    "category": "setup",
+    "priority": 1,
+    "description": "README.md：给 AI Agent 的实操指南",
+    "steps": [
+      "README 包含项目介绍",
+      "包含快速体验指引",
+      "包含 star/fork/打赏引导"
+    ],
+    "passes": false
+  }
+]

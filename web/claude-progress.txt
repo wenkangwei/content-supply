@@ -1,0 +1,33 @@
+# Content Supply Web - Progress Log
+
+## Session 1 - 2026-05-08
+
+**Agent**: Claude
+**Feature**: F001-F012 (项目骨架 + 全部页面)
+**Status**: completed
+
+### What was done
+- 初始化 Vite + React 19 + TypeScript 6 项目
+- 安装依赖: react-router-dom, zustand, axios, lucide-react, recharts, tailwindcss
+- 创建 API 层 (client.ts, types.ts, feeds/items/crawl/hot/rewrite/cleanup.ts)
+- 创建布局组件 (MainLayout, Header, Sidebar)
+- 创建 UI 组件 (Button, Badge, Spinner, Pagination, EmptyState)
+- 创建业务组件 (ContentCard)
+- 创建 9 个页面 (Dashboard, Items, ItemDetail, Feeds, Crawl, Hot, Rewrite, Cleanup, Settings)
+- 配置 TailwindCSS 暗色主题 (AIHOT 风格)
+- 配置 Vite proxy 转发 API
+- TypeScript 类型检查通过
+- 生产构建成功 (dist/ 313KB JS + 20KB CSS)
+
+### What's working
+- npm run type-check: 0 errors
+- npm run build: success
+- 所有页面组件和路由已就位
+
+### What's broken
+- 无 (未连接后端时 API 调用会失败，属预期行为)
+
+### Next step
+- F013: 创建 auto_run.sh 自动化脚本
+- F014: 创建产品文档
+- F015: 编写 README.md

@@ -1,0 +1,56 @@
+site_name: Content Supply Web
+site_description: 内容供给平台前端界面
+site_author: wenkangwei
+theme:
+  name: material
+  language: zh
+  palette:
+    primary: blue
+    accent: light blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  font:
+    text: Noto Sans SC
+    code: JetBrains Mono
+
+nav:
+  - 首页: index.md
+  - 概述:
+    - 项目背景: overview/background.md
+    - 功能特性: overview/features.md
+    - 技术架构: overview/architecture.md
+  - 快速开始:
+    - 安装: tutorials/installation.md
+    - 快速体验: tutorials/quickstart.md
+  - 功能模块:
+    - 仪表板: modules/dashboard.md
+    - 内容池: modules/items.md
+    - 订阅源管理: modules/feeds.md
+    - 爬取中心: modules/crawl.md
+    - 热搜监控: modules/hot.md
+    - 内容改写: modules/rewrite.md
+    - 清理管理: modules/cleanup.md
+  - API 参考:
+    - 概述: api/overview.md
+    - Feeds: api/feeds.md
+    - Items: api/items.md
+  - 开发指南:
+    - 开发规范: dev-guide/standards.md
+    - 贡献指南: dev-guide/contributing.md
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.admonition
+  - attr_list
+  - md_in_html
+  - footnotes
